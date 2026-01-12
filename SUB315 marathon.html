@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sub 315 巔峰紀錄表 - 強風吹拂</title>
+    <style>
+        :root { --primary: #f39c12; --secondary: #2c3e50; --accent: #e74c3c; --white: #ffffff; }
+        body { font-family: 'Noto Sans TC', sans-serif; background: var(--secondary); color: var(--white); margin: 0; padding: 15px; }
+        .speed-lines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.03) 41px); z-index: -1; animation: move-lines 0.5s linear infinite; }
+        @keyframes move-lines { from { transform: translateX(0); } to { transform: translateX(41px); } }
+        .container { max-width: 950px; margin: 0 auto; }
+        header { text-align: center; padding: 25px; background: linear-gradient(135deg, var(--accent), var(--primary)); border-radius: 5px; box-shadow: 8px 8px 0px #000; margin-bottom: 25px; transform: skew(-3deg); }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: rgba(255,255,255,0.1); padding: 15px; border-bottom: 4px solid var(--primary); text-align: center; }
+        .stat-card p { font-size: 20px; font-weight: 900; margin: 5px 0; }
+        .week-selector { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 15px; }
+        .week-btn { padding: 10px 20px; background: transparent; color: white; border: 2px solid white; cursor: pointer; font-weight: 900; font-style: italic; white-space: nowrap; }
+        .week-btn.active { background: white; color: var(--secondary); box-shadow: 4px 4px 0px var(--primary); }
+        .table-container { background: white; color: black; box-shadow: 12px 12px 0px var(--primary); margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #000; color: white; padding: 12px; font-style: italic; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; font-weight: 700; }
+        tr:hover { background: #f9f9f9; }
+        .stride-info { color: #d35400; font-size: 11px; font-weight: 400; display: block; margin-top: 5px; }
+        input { width: 45px; padding: 5px; border: 2px solid #000; font-weight: bold; text-align: center; background: #fffde7; }
+        .runner-box { position: fixed; bottom: 20px; right: 20px; text-align: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; }
+        .runner-sprite { font-size: 30px; animation: run-anim 0.6s steps(2) infinite; }
+        @keyframes run-anim { from { transform: skewX(10deg); } to { transform: skewX(-10deg); } }
+        .clear-btn { background: #666; color: white; border: none; padding: 10px; cursor: pointer; font-size: 10px; margin-top: 20px; opacity: 0.5; }
+        .clear-btn:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+<div class="speed-lines"></div>
+<div class="container">
+    <header>
+        <h1>頂點を目指せ！ Sub 315</h1>
+        <p>「這不只是紀錄，這是通往強大的路徑。」</p>
+    </header>
+    <div class="stats">
+        <div class="stat-card"><h3>倒數日</h3><p id="countdown">--</p></div>
+        <div class="stat-card"><h3>總累積里程</h3><p id="total-km">0</p></div>
+        <div class="stat-card"><h3>目標配速</h3><p>04:37</p></div>
+    </div>
+    <div class="week-selector" id="week-selector"></div>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>日期/星</th><th>課表內容</th><th>跳繩</th><th>km</th><th>心率</th><th>疲勞</th></tr></thead>
+            <tbody id="plan-body"></tbody>
+        </table>
+    </div>
+    <button class="clear-btn" onclick="clearData()">清除所有儲存數據 (重新開始)</button>
+    <div class="runner-box"><div class="runner-sprite">🏃‍♂️💨</div><div style="font-size:10px">灰二在看著你</div></div>
+</div>
+
+<script>
+    // 完整 10 週課表數據
+    const weeks = ["恢復","啟動","開發","強化","巔峰I","調整","巔峰II","模擬","減量","比賽"];
+    const fullPlan = [
+        [{d: "1/12 (一)", r: "全休", s: 2000, t:"rest", n:"啟動"},{d: "1/13 (二)", r: "8k E + 6 趟衝刺", s: 1000, t:"train"},{d: "1/14 (三)", r: "6-8k Easy", s: 2000, t:"easy"},{d: "1/15 (四)", r: "10k E", s: 1000, t:"train"},{d: "1/16 (五)", r: "6-8k Easy", s: 2000, t:"easy"},{d: "1/17 (六)", r: "15k E LSD", s: 0, t:"lsd"},{d: "1/18 (日)", r: "6-8k Easy", s: 2000, t:"easy"}],
+        [{d: "1/19 (一)", r: "全休", s: 2000, t:"rest"},{d: "1/20 (二)", r: "12k E + 6 趟衝刺", s: 1000, t:"train"},{d: "1/21 (三)", r: "8k Easy", s: 2000, t:"easy"},{d: "1/22 (四)", r: "15k E", s: 1000, t:"train"},{d: "1/23 (五)", r: "8k Easy", s: 2000, t:"easy"},{d: "1/24 (六)", r: "20k LSD", s: 0, t:"lsd"},{d: "1/25 (日)", r: "8k Easy", s: 2000, t:"easy"}],
+        [{d: "1/26 (一)", r: "全休", s: 2000, t:"rest", n:"春節"},{d: "1/27 (二)", r: "5k E + 10k T + 5k E", s: 1000, t:"train", n:"初一"},{d: "1/28 (三)", r: "8k Easy", s: 2000, t:"easy", n:"初二"},{d: "1/29 (四)", r: "18k E + 6 趟衝刺", s: 1000, t:"train", n:"初三"},{d: "1/30 (五)", r: "8k Easy", s: 2000, t:"easy", n:"初四"},{d: "1/31 (六)", r: "25k LSD", s: 0, t:"lsd", n:"初五"},{d: "2/01 (日)", r: "8k Easy", s: 2000, t:"easy"}],
+        [{d: "2/02 (一)", r: "全休", s: 2000, t:"rest"},{d: "2/03 (二)", r: "5k E + 1k x 8 + 5k E", s: 1000, t:"train"},{d: "2/04 (三)", r: "8k Easy", s: 2000, t:"easy"},{d: "2/05 (四)", r: "20k MP", s: 1000, t:"train"},{d: "2/06 (五)", r: "8k Easy", s: 2000, t:"easy"},{d: "2/07 (六)", r: "30k LSD", s: 0, t:"lsd"},{d: "2/08 (日)", r: "8k Easy", s: 2000, t:"easy"}],
+        [{d: "2/09 (一)", r: "全休", s: 2000, t:"rest"},{d: "2/10 (二)", r: "22k 漸進跑", s: 1000, t:"train"},{d: "2/11 (三)", r: "8k Easy", s: 2000, t:"easy"},{d: "2/12 (四)", r: "22k MP", s: 1000, t:"train"},{d: "2/13 (五)", r: "8k Easy", s: 2000, t:"easy"},{d: "2/14 (六)", r: "35k LSD", s: 0, t:"lsd", n:"情人節"},{d: "2/15 (日)", r: "8k Easy", s: 2000, t:"easy"}],
+        [{d: "2/16 (一)", r: "全休", s: 2000, t:"rest"},{d: "2/17 (二)", r: "12k E + 6 趟衝刺", s: 1000, t:"train"},{d: "2/18 (三)", r: "5k Easy", s: 2000, t:"easy"},{d: "2/19 (四)", r: "10k E", s: 1000, t:"train"},{d: "2/20 (五)", r: "5k Easy", s: 2000, t:"easy"},{d: "2/21 (六)", r: "18k E LSD", s: 0, t:"lsd"},{d: "2/22 (日)", r: "5k Easy", s: 2000, t:"easy"}],
+        [{d: "2/23 (一)", r: "全休", s: 2000, t:"rest"},{d: "2/24 (二)", r: "5k E + 3k x 4 + 5k E", s: 1000, t:"train"},{d: "2/25 (三)", r: "8k Easy", s: 2000, t:"easy"},{d: "2/26 (四)", r: "25k MP", s: 1000, t:"train"},{d: "2/27 (五)", r: "8k Easy", s: 2000, t:"easy"},{d: "2/28 (六)", r: "38k LSD", s: 0, t:"lsd", n:"228"},{d: "3/01 (日)", r: "8k Easy", s: 2000, t:"easy"}],
+        [{d: "3/02 (一)", r: "全休", s: 2000, t:"rest"},{d: "3/03 (二)", r: "12k E + 6 趟衝刺", s: 1000, t:"train"},{d: "3/04 (三)", r: "6k Easy", s: 2000, t:"easy"},{d: "3/05 (四)", r: "10k E + 5k MP", s: 1000, t:"train"},{d: "3/06 (五)", r: "6k Easy", s: 2000, t:"easy"},{d: "3/07 (六)", r: "21k 模擬賽", s: 0, t:"lsd"},{d: "3/08 (日)", r: "6k Easy", s: 2000, t:"easy"}],
+        [{d: "3/09 (一)", r: "全休", s: 2000, t:"rest"},{d: "3/10 (二)", r: "10k E + 4 趟衝刺", s: 1000, t:"train"},{d: "3/11 (三)", r: "5k Easy", s: 2000, t:"easy"},{d: "3/12 (四)", r: "8k E", s: 1000, t:"train"},{d: "3/13 (五)", r: "5k Easy", s: 2000, t:"easy"},{d: "3/14 (六)", r: "12k E LSD", s: 0, t:"lsd"},{d: "3/15 (日)", r: "5k Easy", s: 2000, t:"easy"}],
+        [{d: "3/16 (一)", r: "全休", s: 2000, t:"rest"},{d: "3/17 (二)", r: "6k E + 4 趟衝刺", s: 1000, t:"train"},{d: "3/18 (三)", r: "4k Easy", s: 1000, t:"easy"},{d: "3/19 (四)", r: "5k (含 2k MP)", s: 500, t:"train"},{d: "3/20 (五)", r: "全休", s: 0, t:"rest"},{d: "3/21 (六)", r: "3k 熱身", s: 0, t:"easy"},{d: "3/22 (日)", r: "正式比賽", s: 0, t:"lsd", n:"頂點"}]
+    ];
+
+    let currentWeek = 0;
+    const weekSelector = document.getElementById('week-selector');
+    const planBody = document.getElementById('plan-body');
+
+    // 生成按鈕
+    weeks.forEach((w, i) => {
+        const btn = document.createElement('button');
+        btn.className = `week-btn ${i===0?'active':''}`;
+        btn.innerText = `W${i+1} ${w}`;
+        btn.onclick = () => showWeek(i);
+        weekSelector.appendChild(btn);
+    });
+
+    function showWeek(idx) {
+        currentWeek = idx;
+        document.querySelectorAll('.week-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+        planBody.innerHTML = fullPlan[idx].map((day, dIdx) => {
+            const idBase = `w${idx}d${dIdx}`;
+            return `
+            <tr>
+                <td>${day.d}${day.n?`<span style="color:red;display:block;font-size:10px">${day.n}</span>`:''}</td>
+                <td>${day.r}${day.r.includes('衝刺')?`<span class="stride-info">⚡100m 加速 / 休 90s</span>`:''}</td>
+                <td>${day.s}</td>
+                <td><input type="text" id="${idBase}km" oninput="saveData()" value="${localStorage.getItem(idBase+'km')||''}"></td>
+                <td><input type="text" id="${idBase}hr" oninput="saveData()" value="${localStorage.getItem(idBase+'hr')||''}"></td>
+                <td><input type="text" id="${idBase}fe" oninput="saveData()" value="${localStorage.getItem(idBase+'fe')||''}"></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function saveData() {
+        fullPlan[currentWeek].forEach((_, dIdx) => {
+            const idBase = `w${currentWeek}d${dIdx}`;
+            localStorage.setItem(idBase+'km', document.getElementById(idBase+'km').value);
+            localStorage.setItem(idBase+'hr', document.getElementById(idBase+'hr').value);
+            localStorage.setItem(idBase+'fe', document.getElementById(idBase+'fe').value);
+        });
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        for(let i=0; i<70; i++) {
+            const w = Math.floor(i/7);
+            const d = i%7;
+            const val = localStorage.getItem(`w${w}d${d}km`);
+            if(val) total += parseFloat(val) || 0;
+        }
+        document.getElementById('total-km').innerText = total.toFixed(1) + " km";
+    }
+
+    function clearData() { if(confirm("確定要清除所有訓練紀錄嗎？")) { localStorage.clear(); location.reload(); } }
+
+    const raceDay = new Date('2026-03-22');
+    const diff = Math.ceil((raceDay - new Date()) / (1000 * 60 * 60 * 24));
+    document.getElementById('countdown').innerText = diff > 0 ? diff + " 天" : "箱根の頂點へ！";
+
+    showWeek(0); calculateTotal();
+</script>
+</body>
+</html>
